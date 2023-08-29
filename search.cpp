@@ -13,25 +13,30 @@ std::mutex futures_m;
 namespace fs = std::filesystem;
 int rec_search(fs::path root_path, char *filename)
 {
-  for (const auto & entry : fs::directory_iterator(root_path))
-  {
-    if (entry.path().filename().compare(filename) == 0)
+  try {
+    for (const auto & entry : fs::directory_iterator(root_path))
     {
-      std::cout << entry.path() << " FILE FIND!" << '\n';
-      return 1;
-    }
-    else
-    {
-      if (entry.is_directory())
+      if (entry.path().filename().compare(filename) == 0)
       {
-        futures_m.lock();
-        futures.push_back(pool.submit([=]()
+        std::cout << entry.path() << " FILE FIND!" << '\n';
+        return 1;
+      }
+      else
+      {
+        if (entry.is_directory())
         {
-          return rec_search(entry.path(), filename);
-          }));
-          futures_m.unlock();
-        }
+          futures_m.lock();
+          futures.push_back(pool.submit([=]()
+          {
+            return rec_search(entry.path(), filename);
+            }));
+            futures_m.unlock();
+          }
+      }
     }
+  } catch (const fs::filesystem_error& e)
+  {
+    std::cout << e.what() << std::endl;
   }
   return 0;
 }
